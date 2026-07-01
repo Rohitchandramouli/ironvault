@@ -150,3 +150,120 @@ class Armour(Gear):
             "durability": self.durability,
             "is_equipped": self.is_equipped
         }
+
+class Accessory(Gear):
+    """Class representing a accessory item."""
+
+    BONUS_RANGES = {
+        "ATTACK": {
+            Rarity.COMMON: (0.01, 0.05),     # +1% to +5%
+            Rarity.UNCOMMON: (0.06, 0.10),   # +6% to +10%
+            Rarity.RARE: (0.11, 0.18),       # +11% to +18%
+            Rarity.EPIC: (0.19, 0.25),       # +19% to +25%
+            Rarity.LEGENDARY: (0.26, 0.40)   # +26% to +40%
+        },
+        "DEFENSE": {
+            Rarity.COMMON: (0.01, 0.05),
+            Rarity.UNCOMMON: (0.06, 0.10),
+            Rarity.RARE: (0.11, 0.18),
+            Rarity.EPIC: (0.19, 0.25),
+            Rarity.LEGENDARY: (0.26, 0.40)
+        },
+        "HEALTH": {
+            Rarity.COMMON: (0.02, 0.08),     # Health scales wider to feel impactful
+            Rarity.UNCOMMON: (0.09, 0.15),
+            Rarity.RARE: (0.16, 0.25),
+            Rarity.EPIC: (0.26, 0.35),
+            Rarity.LEGENDARY: (0.36, 0.50)   # Max +50% base health
+        }
+    }
+
+    def __init__(self, name: str, rarity: Rarity, weight: float, bonus_type: BonusType) -> None:
+        super().__init__(name, rarity, weight)
+        self.bonus_type = bonus_type
+        #  Look up the ranges via the self. class variable reference
+        type_ranges = self.BONUS_RANGES.get(self.bonus_type.value, {})
+        min_max_tuple = type_ranges.get(self.rarity, (0.0, 0.0))
+
+        # Unpack (*) into uniform for the float calculation
+        self.bonus_percentage = round(uniform(*min_max_tuple), 3)
+
+    def use(self, character: "Character") -> None:
+        """Use the accessory."""
+        pass
+
+
+    def degrade(self) -> None:
+        """Accessories do not degrade in this implementation."""
+        pass
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "type": "Accessory",
+            "name": self.name,
+            "rarity": self.rarity.name,
+            "weight": self.weight,
+            "bonus_type": self.bonus_type,
+            "bonus_percentage": self.bonus_percentage,
+            "is_equipped": self.is_equipped
+        }
+
+class Consumable(Item):
+    """Abstract base class for all consumable items in the game."""
+
+    def __init__(self, name:str, rarity:Rarity, weight:float) -> None:
+        super().__init__(name, rarity, weight)
+
+    def use(self, character: "Character") -> bool :
+        """Use the consumable item."""
+        return True
+
+class Potion(Consumable):
+    """Class representing a potion item."""
+
+    def __init__(self, name:str, rarity:Rarity, weight:float, heal_amount:int) -> None:
+        super().__init__(name, rarity, weight)
+        self.heal_amount = heal_amount
+
+    def use(self, character: "Character") -> None:
+        """Use the potion to restore health."""
+        pass
+
+    def degrade(self) -> None:
+        """Potions do not degrade in this implementation."""
+        pass
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "type": "Potion",
+            "name": self.name,
+            "rarity": self.rarity.name,
+            "weight": self.weight,
+            "heal_amount": self.heal_amount
+        }
+
+class RepairKit(Consumable):
+    """Class representing a repair kit item."""
+
+    def __init__(self, name:str, rarity:Rarity, weight:float, repair_amount:int, selected_target:Gear | None) -> None:
+        super().__init__(name, rarity, weight)
+        self.repair_amount = repair_amount
+        self.selected_target = selected_target
+
+    def select_target(self, character: "Character") -> None:
+        """Select the target gear to repair."""
+        pass
+
+    def use(self, character: "Character") -> None:
+        """Use the repair kit to restore durability of gear."""
+        pass
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "type": "RepairKit",
+            "name": self.name,
+            "rarity": self.rarity.name,
+            "weight": self.weight,
+            "repair_amount": self.repair_amount,
+            "selected_target": self.selected_target
+        }
