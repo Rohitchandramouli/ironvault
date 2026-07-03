@@ -66,7 +66,7 @@ class Character:
         self.name = name
         self.char_class = char_class
         self.level = 1
-        self.xp = 0
+        self.current_xp = 0
         max_weight = self.CLASS_STATS_TABLE[char_class.value]["max_weight"]
         self.inventory = Inventory(max_weight=max_weight)
         self.base_health = self.CLASS_STATS_TABLE[char_class.value]["base_health"]
@@ -76,3 +76,51 @@ class Character:
         self.equipped_weapon: Weapon | None = None
         self.equipped_armour: Armour | None = None
         self.equipped_accessory: Accessory | None = None
+
+    @property
+    def effective_attack(self) -> int:
+        """Calculate the effective attack value of the character."""
+        bonus = 0
+        if self.equipped_weapon and self.equipped_weapon.durability > 0:
+            bonus += self.equipped_weapon.attack_power
+        if self.equipped_accessory and self.equipped_accessory.bonus_type == BonusType.ATTACK:
+            bonus += self.base_attack * self.equipped_accessory.bonus_percentage
+        return self.base_attack + bonus
+
+    @property
+    def effective_defense(self) -> int:
+        """Calculate the effective defense value of the character."""
+        bonus = 0
+        if self.equipped_armour and self.equipped_armour.durability > 0:
+            bonus += self.equipped_armour.defense_rating
+        if self.equipped_accessory and self.equipped_accessory.bonus_type == BonusType.DEFENSE:
+            bonus += self.base_defense * self.equipped_accessory.bonus_percentage
+        return self.base_defense + bonus
+
+    def equip(self,item: Gear) -> None:
+        """Equip a gear item to the character."""
+        if isinstance(item, Weapon):
+            self.equipped_weapon = item
+            logger.info(f"{self.name} equipped weapon: {item.name}")
+        elif isinstance(item, Armour):
+            self.equipped_armour = item
+            logger.info(f"{self.name} equipped armour: {item.name}")
+        elif isinstance(item, Accessory):
+            self.equipped_accessory = item
+            logger.info(f"{self.name} equipped accessory: {item.name}")
+        else:
+            logger.warning(f"{self.name} tried to equip an invalid item: {item.name}")
+
+    def unequip(self,item: Gear) -> None:
+        """Unequip a gear item from the character."""
+        if isinstance(item, Weapon) and self.equipped_weapon:
+            logger.info(f"{self.name} unequipped weapon: {self.equipped_weapon.name}")
+            self.equipped_weapon = None
+        elif isinstance(item, Armour) and self.equipped_armour:
+            logger.info(f"{self.name} unequipped armour: {self.equipped_armour.name}")
+            self.equipped_armour = None
+        elif isinstance(item, Accessory) and self.equipped_accessory:
+            logger.info(f"{self.name} unequipped accessory: {self.equipped_accessory.name}")
+            self.equipped_accessory = None
+        else:
+            logger.warning(f"{self.name} tried to unequip an invalid or non-equipped item: {item.name}")
