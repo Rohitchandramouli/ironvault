@@ -10,7 +10,6 @@ import logging
 from random import randint, uniform
 
 from typing import TYPE_CHECKING, Any
-
 if TYPE_CHECKING:
     from Ironvault.character import Character
 
@@ -104,6 +103,7 @@ class Item(ABC):
                 repair_amount=data["repair_amount"]
             )
         else:
+            logger.error("Unknown item type: %s", item_type)
             raise ValueError(f"Unknown item type: {item_type}")
 
 class Gear(Item):
