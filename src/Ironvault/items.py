@@ -7,9 +7,9 @@ It contains 3 abstract classes: Item, Gear and Consumable.Gear contains 3 subcla
 from abc import ABC, abstractmethod
 from enum import Enum
 import logging
-from random import randint, random, uniform
+from random import randint, uniform
 
-from typing import TYPE_CHECKING, Generator, Any
+from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from Ironvault.character import Character
 
@@ -27,7 +27,7 @@ class Rarity(Enum):
     EPIC = ("E", "Epic")
     LEGENDARY = ("L", "Legendary")
 
-    def __init__(self, shorthand, fullname):
+    def __init__(self, shorthand:str, fullname:str) -> None:
         self.shorthand = shorthand
         self.fullname = fullname
 
@@ -55,6 +55,56 @@ class Item(ABC):
     @abstractmethod
     def to_dict(self) -> dict[str, Any]:
         pass
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "Item":
+        """Load item attributes from a dictionary."""
+        item_type = data["type"]
+        rarity = Rarity[data["rarity"]]
+        if item_type == "Weapon":
+            return Weapon(
+                name=data["name"],
+                rarity=rarity,
+                weight=data["weight"],
+                attack_power=data["attack_power"],
+                max_durability=data["max_durability"],
+                durability=data["durability"]
+            )
+        elif item_type == "Armour":
+            return Armour(
+                name=data["name"],
+                rarity=rarity,
+                weight=data["weight"],
+                defense_rating=data["defense_rating"],
+                max_durability=data["max_durability"],
+                durability=data["durability"]
+            )
+        elif item_type == "Accessory":
+            bonus_type = BonusType(data["bonus_type"])
+            accessory = Accessory(
+                name=data["name"],
+                rarity=rarity,
+                weight=data["weight"],
+                bonus_type=bonus_type
+            )
+            accessory.bonus_percentage = data["bonus_percentage"]
+            return accessory
+        elif item_type == "Potion":
+            return Potion(
+                name=data["name"],
+                rarity=rarity,
+                weight=data["weight"],
+                heal_amount=data["heal_amount"]
+            )
+        elif item_type == "RepairKit":
+            return RepairKit(
+                name=data["name"],
+                rarity=rarity,
+                weight=data["weight"],
+                repair_amount=data["repair_amount"]
+            )
+        else:
+            raise ValueError(f"Unknown item type: {item_type}")
 
 class Gear(Item):
     """Abstract base class for all gear items in the game."""
@@ -90,14 +140,16 @@ class Gear(Item):
 class Weapon(Gear):
     """Class representing a weapon item."""
 
-    def __init__(self, name:str, rarity:Rarity, weight:float) -> None:
+    def __init__(self, name:str, rarity:Rarity, weight:float, attack_power: int | None =None, max_durability: int | None = None, durability: int | None = None) -> None:
         super().__init__(name, rarity, weight)
-        self.attack_power = randint(*self.STAT_RANGES.get(rarity, (0, 0)))
-        self.durability = randint(*self.DURABILITY_RANGES.get(rarity, (0, 0)))
+        self.attack_power = attack_power if attack_power is not None else randint(*self.STAT_RANGES[rarity])
+        self.max_durability = max_durability if max_durability is not None else randint(*self.DURABILITY_RANGES.get(rarity, (0, 0)))
+        self.durability = durability if durability is not None else self.max_durability
 
     def use(self, character: "Character") -> None:
         """Use the weapon to attack an enemy."""
         if self.durability <= 0:
+            logger.warning("%s is broken and cannot be used.", self.name)
             raise BrokenItemError(f"{self.name} is broken and cannot be used.")
         self.degrade()
 
@@ -115,6 +167,7 @@ class Weapon(Gear):
             "rarity": self.rarity.name,
             "weight": self.weight,
             "attack_power": self.attack_power,
+            "max_durability": self.max_durability,
             "durability": self.durability,
             "is_equipped": self.is_equipped
         }
@@ -122,14 +175,16 @@ class Weapon(Gear):
 class Armour(Gear):
     """Class representing a armour item."""
 
-    def __init__(self, name:str, rarity:Rarity, weight:float) -> None:
+    def __init__(self, name:str, rarity:Rarity, weight:float, defense_rating: int | None = None, max_durability: int | None = None, durability: int | None = None) -> None:
         super().__init__(name, rarity, weight)
-        self.defense_rating = randint(*self.STAT_RANGES.get(rarity, (0, 0)))
-        self.durability = randint(*self.DURABILITY_RANGES.get(rarity, (0, 0)))
+        self.defense_rating = defense_rating if defense_rating is not None else randint(*self.STAT_RANGES[rarity])
+        self.max_durability = max_durability if max_durability is not None else randint(*self.DURABILITY_RANGES.get(rarity, (0, 0)))
+        self.durability = durability if durability is not None else self.max_durability
 
     def use(self, character: "Character") -> None:
         """Use the armour to protect the character."""
         if self.durability <= 0:
+            logger.warning("%s is broken and cannot be used.", self.name)
             raise BrokenItemError(f"{self.name} is broken and cannot be used.")
         self.degrade()
 
@@ -147,6 +202,7 @@ class Armour(Gear):
             "rarity": self.rarity.name,
             "weight": self.weight,
             "defense_rating": self.defense_rating,
+            "max_durability": self.max_durability,
             "durability": self.durability,
             "is_equipped": self.is_equipped
         }
@@ -178,7 +234,7 @@ class Accessory(Gear):
         }
     }
 
-    def __init__(self, name: str, rarity: Rarity, weight: float, bonus_type: BonusType) -> None:
+    def __init__(self, name: str, rarity: Rarity, weight: float, bonus_type: BonusType, bonus_percentage: float | None = None) -> None:
         super().__init__(name, rarity, weight)
         self.bonus_type = bonus_type
         #  Look up the ranges via the self. class variable reference
@@ -186,10 +242,10 @@ class Accessory(Gear):
         min_max_tuple = type_ranges.get(self.rarity, (0.0, 0.0))
 
         # Unpack (*) into uniform for the float calculation
-        self.bonus_percentage = round(uniform(*min_max_tuple), 3)
+        self.bonus_percentage =bonus_percentage if bonus_percentage is not None else round(uniform(*min_max_tuple), 3)
 
     def use(self, character: "Character") -> None:
-        """Use the accessory."""
+        """Accessories are passive — their bonus is applied via Character properties, not through use()."""
         pass
 
 
@@ -203,7 +259,7 @@ class Accessory(Gear):
             "name": self.name,
             "rarity": self.rarity.name,
             "weight": self.weight,
-            "bonus_type": self.bonus_type,
+            "bonus_type": self.bonus_type.value,
             "bonus_percentage": self.bonus_percentage,
             "is_equipped": self.is_equipped
         }
@@ -214,20 +270,22 @@ class Consumable(Item):
     def __init__(self, name:str, rarity:Rarity, weight:float) -> None:
         super().__init__(name, rarity, weight)
 
+    @abstractmethod
     def use(self, character: "Character") -> bool :
         """Use the consumable item."""
-        return True
+        pass
 
 class Potion(Consumable):
     """Class representing a potion item."""
 
-    def __init__(self, name:str, rarity:Rarity, weight:float, heal_amount:int) -> None:
+    def __init__(self, name:str,rarity:Rarity, weight:float, heal_amount:int) -> None:
         super().__init__(name, rarity, weight)
         self.heal_amount = heal_amount
 
-    def use(self, character: "Character") -> None:
+    def use(self, character: "Character") -> bool:
         """Use the potion to restore health."""
-        pass
+        character.heal(self.heal_amount)
+        return True
 
     def degrade(self) -> None:
         """Potions do not degrade in this implementation."""
@@ -245,17 +303,22 @@ class Potion(Consumable):
 class RepairKit(Consumable):
     """Class representing a repair kit item."""
 
-    def __init__(self, name:str, rarity:Rarity, weight:float, repair_amount:int, selected_target:Gear | None) -> None:
+    def __init__(self, name:str, rarity:Rarity, weight:float, repair_amount:int) -> None:
         super().__init__(name, rarity, weight)
         self.repair_amount = repair_amount
-        self.selected_target = selected_target
+        self.selected_target: Weapon | Armour | None = None
 
-    def select_target(self, character: "Character") -> None:
-        """Select the target gear to repair."""
-        pass
-
-    def use(self, character: "Character") -> None:
+    def use(self, character: "Character") -> bool:
         """Use the repair kit to restore durability of gear."""
+        if self.selected_target is not None:
+            self.selected_target.durability = min(
+                self.selected_target.durability + self.repair_amount,
+                self.selected_target.max_durability
+            )
+        return True
+
+    def degrade(self) -> None:
+        """Repair kits do not degrade in this implementation."""
         pass
 
     def to_dict(self) -> dict[str, Any]:
@@ -264,6 +327,5 @@ class RepairKit(Consumable):
             "name": self.name,
             "rarity": self.rarity.name,
             "weight": self.weight,
-            "repair_amount": self.repair_amount,
-            "selected_target": self.selected_target
+            "repair_amount": self.repair_amount
         }
