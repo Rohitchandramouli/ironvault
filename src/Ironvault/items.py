@@ -10,6 +10,7 @@ import logging
 from random import randint, uniform
 
 from typing import TYPE_CHECKING, Any
+
 if TYPE_CHECKING:
     from Ironvault.character import Character
 
@@ -81,14 +82,13 @@ class Item(ABC):
             )
         elif item_type == "Accessory":
             bonus_type = BonusType(data["bonus_type"])
-            accessory = Accessory(
+            return Accessory(
                 name=data["name"],
                 rarity=rarity,
+                bonus_type=bonus_type,
                 weight=data["weight"],
-                bonus_type=bonus_type
+                bonus_percentage=data["bonus_percentage"]
             )
-            accessory.bonus_percentage = data["bonus_percentage"]
-            return accessory
         elif item_type == "Potion":
             return Potion(
                 name=data["name"],
@@ -139,8 +139,9 @@ class Gear(Item):
 
 class Weapon(Gear):
     """Class representing a weapon item."""
-
-    def __init__(self, name:str, rarity:Rarity, weight:float, attack_power: int | None =None, max_durability: int | None = None, durability: int | None = None) -> None:
+    WEIGHT_RANGE    = (1.0, 5.0)
+    def __init__(self, name:str, rarity:Rarity, weight:float | None = None, attack_power: int | None =None, max_durability: int | None = None, durability: int | None = None) -> None:
+        weight = weight if weight is not None else round(uniform(*self.WEIGHT_RANGE), 2)
         super().__init__(name, rarity, weight)
         self.attack_power = attack_power if attack_power is not None else randint(*self.STAT_RANGES[rarity])
         self.max_durability = max_durability if max_durability is not None else randint(*self.DURABILITY_RANGES.get(rarity, (0, 0)))
@@ -174,8 +175,9 @@ class Weapon(Gear):
 
 class Armour(Gear):
     """Class representing a armour item."""
-
-    def __init__(self, name:str, rarity:Rarity, weight:float, defense_rating: int | None = None, max_durability: int | None = None, durability: int | None = None) -> None:
+    WEIGHT_RANGE    = (5.0, 25.0)
+    def __init__(self, name:str, rarity:Rarity, weight:float | None = None, defense_rating: int | None = None, max_durability: int | None = None, durability: int | None = None) -> None:
+        weight = weight if weight is not None else round(uniform(*self.WEIGHT_RANGE), 2)
         super().__init__(name, rarity, weight)
         self.defense_rating = defense_rating if defense_rating is not None else randint(*self.STAT_RANGES[rarity])
         self.max_durability = max_durability if max_durability is not None else randint(*self.DURABILITY_RANGES.get(rarity, (0, 0)))
@@ -209,7 +211,7 @@ class Armour(Gear):
 
 class Accessory(Gear):
     """Class representing a accessory item."""
-
+    WEIGHT_RANGE = (0.1, 0.5)
     BONUS_RANGES = {
         "ATTACK": {
             Rarity.COMMON: (0.01, 0.05),     # +1% to +5%
@@ -234,7 +236,8 @@ class Accessory(Gear):
         }
     }
 
-    def __init__(self, name: str, rarity: Rarity, weight: float, bonus_type: BonusType, bonus_percentage: float | None = None) -> None:
+    def __init__(self, name: str, rarity: Rarity, bonus_type: BonusType, weight: float | None = None, bonus_percentage: float | None = None) -> None:
+        weight = weight if weight is not None else round(uniform(*self.WEIGHT_RANGE), 2)
         super().__init__(name, rarity, weight)
         self.bonus_type = bonus_type
         #  Look up the ranges via the self. class variable reference
@@ -277,8 +280,9 @@ class Consumable(Item):
 
 class Potion(Consumable):
     """Class representing a potion item."""
-
-    def __init__(self, name:str,rarity:Rarity, weight:float, heal_amount:int) -> None:
+    WEIGHT_RANGE    = (0.2, 0.5)
+    def __init__(self, name:str,rarity:Rarity, heal_amount:int, weight:float | None = None) -> None:
+        weight = weight if weight is not None else round(uniform(*self.WEIGHT_RANGE), 2)
         super().__init__(name, rarity, weight)
         self.heal_amount = heal_amount
 
@@ -302,8 +306,9 @@ class Potion(Consumable):
 
 class RepairKit(Consumable):
     """Class representing a repair kit item."""
-
-    def __init__(self, name:str, rarity:Rarity, weight:float, repair_amount:int) -> None:
+    WEIGHT_RANGE = (2.0, 6.0)
+    def __init__(self, name:str, rarity:Rarity, repair_amount:int, weight:float | None = None) -> None:
+        weight = weight if weight is not None else round(uniform(*self.WEIGHT_RANGE), 2)
         super().__init__(name, rarity, weight)
         self.repair_amount = repair_amount
         self.selected_target: Weapon | Armour | None = None
