@@ -110,20 +110,21 @@ class Gear(Item):
     """Abstract base class for all gear items in the game."""
 
     DURABILITY_RANGES = {
-    Rarity.COMMON: (1, 20),
-    Rarity.UNCOMMON: (21, 40),
-    Rarity.RARE: (41, 60),
-    Rarity.EPIC: (61, 80),
-    Rarity.LEGENDARY: (81, 100)
+        Rarity.COMMON: (1, 20),       # Linear 20-point bands; low tier shatters rapidly
+        Rarity.UNCOMMON: (21, 40),    # Mid-range resilience; standard soldier gear threshold
+        Rarity.RARE: (41, 60),        # High-grade durability; built for extended expeditions
+        Rarity.EPIC: (61, 80),        # Elite craftsmanship; holds an edge through multiple dungeons
+        Rarity.LEGENDARY: (81, 100)   # Mythic artifact tier; near-unbreakable maximum lifespans
     }
 
     STAT_RANGES = {
-    Rarity.COMMON: (10, 30),
-    Rarity.UNCOMMON: (31, 60),
-    Rarity.RARE: (61, 90),
-    Rarity.EPIC: (91, 120),
-    Rarity.LEGENDARY: (121, 150)
+        Rarity.COMMON: (10, 30),      # Symmetrical 30-point intervals; base combat baseline
+        Rarity.UNCOMMON: (31, 60),    # Moderate power jump; standard scaling step for midgame
+        Rarity.RARE: (61, 90),        # Strategic milestone; unlocks clear advantages over low tiers
+        Rarity.EPIC: (91, 120),       # High-power output; safely offsets maximum armor mitigations
+        Rarity.LEGENDARY: (121, 150)  # Absolute ceiling; god-tier values for ultimate weapons/armor
     }
+
 
     def __init__(self,name:str, rarity:Rarity, weight:float) -> None:
         super().__init__(name, rarity, weight)
