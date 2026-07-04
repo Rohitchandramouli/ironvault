@@ -204,7 +204,7 @@ class Inventory:
         if gear not in self._gear:
             logger.warning("Attempted to equip %s, but it is not in Inventory.", gear.name)
             raise ItemNotFoundError(f"{gear.name} not found in Inventory.")
-        character.equip(gear)
+        character.equip_gear(gear)
         logger.info("Equipped %s to character.", gear.name)
 
     def unequip(self, gear: Gear, character: "Character") -> None:
@@ -212,7 +212,7 @@ class Inventory:
         if gear not in self._gear:
             logger.warning("Attempted to unequip %s, but it is not in Inventory.", gear.name)
             raise ItemNotFoundError(f"{gear.name} not found in Inventory.")
-        character.unequip(gear)
+        character.unequip_gear(gear)
         logger.info("Unequipped %s from character.", gear.name)
 
     def loot_drop(self) -> Generator[Item, None, None]:

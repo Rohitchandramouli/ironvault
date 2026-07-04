@@ -15,7 +15,7 @@ from Ironvault.items import (
     Weapon, Armour, Accessory, Potion, RepairKit
 )
 
-from Ironvault.inventory import Inventory
+from Ironvault.inventory import Inventory, ItemNotFoundError
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +78,7 @@ class Character:
         self.equipped_accessory: Accessory | None = None
 
     @property
-    def effective_attack(self) -> int:
+    def effective_attack(self) -> float:
         """Calculate the effective attack value of the character."""
         bonus = 0
         if self.equipped_weapon and self.equipped_weapon.durability > 0:
@@ -88,7 +88,7 @@ class Character:
         return self.base_attack + bonus
 
     @property
-    def effective_defense(self) -> int:
+    def effective_defense(self) -> float:
         """Calculate the effective defense value of the character."""
         bonus = 0
         if self.equipped_armour and self.equipped_armour.durability > 0:
@@ -97,30 +97,129 @@ class Character:
             bonus += self.base_defense * self.equipped_accessory.bonus_percentage
         return self.base_defense + bonus
 
-    def equip(self,item: Gear) -> None:
+    def equip_gear(self,item: Gear) -> None:
         """Equip a gear item to the character."""
         if isinstance(item, Weapon):
+            if self.equipped_weapon:
+                self.equipped_weapon.unequip(self)
             self.equipped_weapon = item
-            logger.info(f"{self.name} equipped weapon: {item.name}")
+            item.equip(self)
+            logger.info("%s equipped weapon: %s, effective attack: %.2f", self.name, item.name, self.effective_attack)
         elif isinstance(item, Armour):
+            if self.equipped_armour:
+                self.equipped_armour.unequip(self)
             self.equipped_armour = item
-            logger.info(f"{self.name} equipped armour: {item.name}")
+            item.equip(self)
+            logger.info("%s equipped armour: %s, effective defense: %.2f", self.name, item.name, self.effective_defense)
         elif isinstance(item, Accessory):
+            if self.equipped_accessory:
+                self.equipped_accessory.unequip(self)
             self.equipped_accessory = item
-            logger.info(f"{self.name} equipped accessory: {item.name}")
+            item.equip(self)
+            logger.info("%s equipped accessory: %s, effective attack: %.2f, effective defense: %.2f", self.name, item.name, self.effective_attack, self.effective_defense)
         else:
-            logger.warning(f"{self.name} tried to equip an invalid item: {item.name}")
+            logger.warning("%s tried to equip an invalid item: %s", self.name, item.name)
 
-    def unequip(self,item: Gear) -> None:
+    def unequip_gear(self,item: Gear) -> None:
         """Unequip a gear item from the character."""
         if isinstance(item, Weapon) and self.equipped_weapon:
-            logger.info(f"{self.name} unequipped weapon: {self.equipped_weapon.name}")
+            logger.info("%s unequipped weapon: %s", self.name, self.equipped_weapon.name)
+            self.equipped_weapon.unequip(self)
             self.equipped_weapon = None
         elif isinstance(item, Armour) and self.equipped_armour:
-            logger.info(f"{self.name} unequipped armour: {self.equipped_armour.name}")
+            logger.info("%s unequipped armour: %s", self.name, self.equipped_armour.name)
+            self.equipped_armour.unequip(self)
             self.equipped_armour = None
         elif isinstance(item, Accessory) and self.equipped_accessory:
-            logger.info(f"{self.name} unequipped accessory: {self.equipped_accessory.name}")
+            logger.info("%s unequipped accessory: %s", self.name, self.equipped_accessory.name)
+            self.equipped_accessory.unequip(self)
             self.equipped_accessory = None
         else:
-            logger.warning(f"{self.name} tried to unequip an invalid or non-equipped item: {item.name}")
+            logger.warning("%s tried to unequip an invalid or non-equipped item: %s", self.name, item.name)
+
+    def heal(self, amount: int) -> None:
+        """Heal the character by a specified amount, without exceeding base health."""
+        self.health = min(self.health + amount, self.base_health)
+
+    def use_consumable(self, item:Consumable) -> None:
+        """Use a consumable item from the character's inventory."""
+        if item not in self.inventory:
+            logger.warning("%s tried to use a consumable not in inventory: %s", self.name, item.name)
+            raise ItemNotFoundError(f"{item.name} not found in Inventory.")
+        item.use(self)
+        self.inventory.remove_item(item)
+        logger.info("%s used consumable: %s", self.name, item.name)
+        if isinstance(item, Potion):
+            logger.info("%s health after potion: %d/%d",
+                        self.name, self.health, self.base_health)
+        elif isinstance(item, RepairKit) and item.selected_target is not None:
+            logger.info("Repaired %s. Current durability: %d/%d",
+                        item.selected_target.name,
+                        item.selected_target.durability,
+                        item.selected_target.max_durability)
+
+    def gain_xp(self, amount: int) -> None:
+        """Gain experience points and handle leveling up."""
+        self.current_xp += amount
+        logger.info("%s gained %d XP. Current XP: %d", self.name, amount, self.current_xp)
+        while True:
+            level_up_threshold = int(self.level * 100 * self.XP_MULTIPLIER)
+            if self.current_xp < level_up_threshold:
+                break
+            self.level+=1
+            self.current_xp -= level_up_threshold
+            self.base_health += int(self.base_health * 0.1)  # Increase base health by 10%
+            self.base_attack += int(self.base_attack * 0.1)  # Increase base attack by 10%
+            self.base_defense += int(self.base_defense * 0.1)  # Increase base defense by 10%
+            self.health = self.base_health  # Restore health to new max
+            logger.info("%s leveled up! New level: %d, Base Health: %d, Base Attack: %d, Base Defense: %d",
+                        self.name, self.level, self.base_health, self.base_attack, self.base_defense)
+        logger.info("%s's current XP after processing: %d", self.name, self.current_xp)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert the character's state to a dictionary for serialization."""
+        return {
+            "name": self.name,
+            "char_class": self.char_class.value,
+            "level": self.level,
+            "current_xp": self.current_xp,
+            "base_health": self.base_health,
+            "base_attack": self.base_attack,
+            "base_defense": self.base_defense,
+            "health": self.health,
+            "equipped_weapon": self.equipped_weapon.to_dict() if self.equipped_weapon else None,
+            "equipped_armour": self.equipped_armour.to_dict() if self.equipped_armour else None,
+            "equipped_accessory": self.equipped_accessory.to_dict() if self.equipped_accessory else None,
+            "inventory": self.inventory.to_dict()
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "Character":
+        """Create a Character instance from a dictionary."""
+        char_class = CharacterClass(data["char_class"])
+        character = cls(name=data["name"], char_class=char_class)
+        character.level = data["level"]
+        character.current_xp = data["current_xp"]
+        character.base_health = data["base_health"]
+        character.base_attack = data["base_attack"]
+        character.base_defense = data["base_defense"]
+        character.health = data["health"]
+        character.inventory = Inventory.from_dict(data["inventory"])
+
+        # Equip items if they exist
+        if data.get("equipped_weapon"):
+            weapon_name = data["equipped_weapon"]
+            character.equipped_weapon = Item.from_dict(weapon_name)
+            character.equipped_weapon.equip(character)
+
+        if data.get("equipped_armour"):
+            armour_name = data["equipped_armour"]
+            character.equipped_armour = Item.from_dict(armour_name)
+            character.equipped_armour.equip(character)
+
+        if data.get("equipped_accessory"):
+            accessory_name = data["equipped_accessory"]
+            character.equipped_accessory = Item.from_dict(accessory_name)
+            character.equipped_accessory.equip(character)
+
+        return character
