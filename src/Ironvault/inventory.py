@@ -1,5 +1,5 @@
 """
-This file contains the inventory management system for Ironvault.
+This module contains the inventory management system for Ironvault.
 It only deals with the inventory of a character, allowing them to add, remove, and manage items.
 It depends only on the `items` module for item definitions.
 It only has one class, `Inventory`, which is used to manage a character's inventory.

@@ -1,5 +1,5 @@
 """
-This file contains the character management system for Ironvault.
+This module contains the character management system for Ironvault.
 It defines the `Character` class and its associated methods.
 It depends on the `items` module for item definitions and the `inventory` module for inventory management.
 It defines the enum, `CharacterClass`, for different character classes.
