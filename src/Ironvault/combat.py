@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from abc import ABC, abstractmethod
 import logging
 
-from Ironvault.character import Character, CharacterClass
+from Ironvault.character import Character
 
 logger = logging.getLogger(__name__)
 
@@ -57,17 +57,17 @@ def combat(char_a: Character, char_b: Character, strategy: DamageStrategy = Norm
         # After attacker hits:
         if char_a.equipped_weapon and char_a.equipped_weapon.durability > 0:
             char_a.equipped_weapon.degrade()
+            if char_a.equipped_weapon.durability == 0:
+                print(f"{char_a.name} fights bare-fisted!")
+                logger.warning("%s's weapon broke mid-combat.", char_a.name)
         if char_a.equipped_armour and char_a.equipped_armour.durability > 0:
             char_a.equipped_armour.degrade()
-        # Then check if now broken and print label
-        if char_a.equipped_weapon and char_a.equipped_weapon.durability == 0:
-            print(f"{char_a.name} fights bare-fisted!")
-            logger.warning("%s's weapon broke mid-combat.", char_a.name)
-        if char_a.equipped_armour and char_a.equipped_armour.durability == 0:
-            print(f"{char_a.name} is unarmored!")
-            logger.warning("%s's armour broke mid-combat.", char_a.name)
+            if char_a.equipped_armour.durability == 0:
+                print(f"{char_a.name} is unarmored!")
+                logger.warning("%s's armour broke mid-combat.", char_a.name)
 
         logger.info("%s attacks %s for %d damage. %s has %d health left.", char_a.name, char_b.name, damage_a_to_b, char_b.name, char_b.health)
+        print(f"{char_a.name} attacks {char_b.name} for {int(damage_a_to_b)} damage. {char_b.name} has {char_b.health} HP left.")
 
         if char_b.health == 0:
             break  # char_b is dead, don't let them attack back
@@ -78,21 +78,24 @@ def combat(char_a: Character, char_b: Character, strategy: DamageStrategy = Norm
 
         if char_b.equipped_weapon and char_b.equipped_weapon.durability > 0:
             char_b.equipped_weapon.degrade()
+            if char_b.equipped_weapon.durability == 0:
+                print(f"{char_b.name} fights bare-fisted!")
+                logger.warning("%s's weapon broke mid-combat.", char_b.name)
         if char_b.equipped_armour and char_b.equipped_armour.durability > 0:
             char_b.equipped_armour.degrade()
-
-        if char_b.equipped_weapon and char_b.equipped_weapon.durability == 0:
-            print(f"{char_b.name} fights bare-fisted!")
-            logger.warning("%s's weapon broke mid-combat.", char_b.name)
-        if char_b.equipped_armour and char_b.equipped_armour.durability == 0:
-            print(f"{char_b.name} is unarmored!")
-            logger.warning("%s's armour broke mid-combat.", char_b.name)
+            if char_b.equipped_armour.durability == 0:
+                print(f"{char_b.name} is unarmored!")
+                logger.warning("%s's armour broke mid-combat.", char_b.name)
 
         logger.info("%s attacks %s for %d damage. %s has %d health left.", char_b.name, char_a.name, damage_b_to_a, char_a.name, char_a.health)
+        print(f"{char_b.name} attacks {char_a.name} for {int(damage_b_to_a)} damage. {char_a.name} has {char_a.health} HP left.")
 
-    logger.info("Combat ended. %s has %d health left. %s has %d health left.", char_a.name, char_a.health, char_b.name, char_b.health)
     winner = char_a if char_b.health == 0 else char_b
     defeated = char_b if char_b.health == 0 else char_a
+
+    logger.info("Combat ended. %s has %d health left. %s has %d health left.Combat ended in %d turns. Winner: %s, Defeated: %s", char_a.name, char_a.health, char_b.name, char_b.health, turn_count, winner.name, defeated.name)
+    print(f"\nCombat ended! {winner.name} wins after {turn_count} turns.")
+
     return CombatResult(
         winner=winner,
         defeated=defeated,
