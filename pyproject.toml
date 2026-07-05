@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=61.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "Ironvault"
+version = "0.1.0"
+description = "An RPG game engine backend with structural combat mechanics."
+readme = "README.md"
+requires-python = "==3.11.9"
+authors = [
+    { name = "Rohit" }
+]
+classifiers = [
+    "Programming Language :: Python :: 3.11",
+    "Operating System :: OS Independent",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "ruff>=0.3.0",
+    "mypy>=1.9.0"
+]
+
+# This registers the terminal command linking 'Ironvault' to the script execution
+[project.scripts]
+Ironvault = "Ironvault.main:run"
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+src = ["src"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+strict = true
+explicit_package_bases = true
+mypy_path = "src"
