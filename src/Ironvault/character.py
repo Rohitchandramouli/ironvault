@@ -11,7 +11,7 @@ import logging
 from typing import Any, cast
 
 from Ironvault.items import (
-    Item, Gear, Consumable, Rarity, BonusType,
+    Item, Gear, Consumable, BonusType,
     Weapon, Armour, Accessory, Potion, RepairKit
 )
 

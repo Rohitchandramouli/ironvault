@@ -5,13 +5,31 @@ Importers can access all engine functionality via `from Ironvault import ...` wi
 """
 
 from Ironvault.items import (
-    Item, Gear, Weapon, Armour, Accessory,
-    Consumable, Potion, RepairKit,
-    Rarity, BonusType,
-    BrokenItemError
+    Item as Item,
+    Gear as Gear,
+    Weapon as Weapon,
+    Armour as Armour,
+    Accessory as Accessory,
+    Consumable as Consumable,
+    Potion as Potion,
+    RepairKit as RepairKit,
+    Rarity as Rarity,
+    BonusType as BonusType,
+    BrokenItemError as BrokenItemError,
 )
-from Ironvault.inventory import Inventory, InventoryFullError, ItemNotFoundError
-from Ironvault.character import Character, CharacterClass
-from Ironvault.combat import combat, CombatResult, DamageStrategy, NormalDamage, CriticalDamage
-
-# CorruptSaveError imported from main.py once implemented
+from Ironvault.inventory import (
+    Inventory as Inventory,
+    InventoryFullError as InventoryFullError,
+    ItemNotFoundError as ItemNotFoundError,
+)
+from Ironvault.character import (
+    Character as Character,
+    CharacterClass as CharacterClass,
+)
+from Ironvault.combat import (
+    combat as combat,
+    CombatResult as CombatResult,
+    DamageStrategy as DamageStrategy,
+    NormalDamage as NormalDamage,
+    CriticalDamage as CriticalDamage,
+)
