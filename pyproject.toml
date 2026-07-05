@@ -7,7 +7,7 @@ name = "Ironvault"
 version = "0.1.0"
 description = "An RPG game engine backend with structural combat mechanics."
 readme = "README.md"
-requires-python = "==3.11.9"
+requires-python = ">=3.11"
 authors = [
     { name = "Rohit" }
 ]
@@ -23,6 +23,11 @@ dev = [
     "ruff>=0.3.0",
     "mypy>=1.9.0"
 ]
+
+#To run properly even without pip install -e
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
 
 # This registers the terminal command linking 'Ironvault' to the script execution
 [project.scripts]

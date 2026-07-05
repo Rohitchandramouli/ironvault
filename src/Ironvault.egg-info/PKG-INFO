@@ -1,0 +1,13 @@
+Metadata-Version: 2.4
+Name: Ironvault
+Version: 0.1.0
+Summary: An RPG game engine backend with structural combat mechanics.
+Author: Rohit
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Operating System :: OS Independent
+Requires-Python: ==3.11.9
+Description-Content-Type: text/markdown
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0.0; extra == "dev"
+Requires-Dist: ruff>=0.3.0; extra == "dev"
+Requires-Dist: mypy>=1.9.0; extra == "dev"

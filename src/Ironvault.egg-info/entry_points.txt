@@ -1,0 +1,2 @@
+[console_scripts]
+Ironvault = Ironvault.main:run

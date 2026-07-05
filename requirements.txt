@@ -4,6 +4,3 @@
 pytest>=8.0.0
 ruff>=0.3.0
 mypy>=1.9.0
-
-# Install the local package in editable mode
--e .
