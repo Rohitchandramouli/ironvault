@@ -62,13 +62,18 @@ class Character:
     # Shared level-up threshold scaling across all Characters
     XP_MULTIPLIER = 1.5
 
+    @property
+    def level_up_threshold(self) -> int:
+        """Calculate the XP required to reach the next level."""
+        return int(self.level * 100 * self.XP_MULTIPLIER)
+
     def __init__(self, name: str, char_class: CharacterClass) -> None:
         self.name = name
         self.char_class = char_class
         self.base_health = self.CLASS_STATS_TABLE[char_class.value]["base_health"]
         self.base_attack = self.CLASS_STATS_TABLE[char_class.value]["base_attack"]
         self.base_defense = self.CLASS_STATS_TABLE[char_class.value]["base_defense"]
-        self.health = self.base_health  # now safe — base_health exists
+        self.health = self.base_health
         self.xp_reward_base = self.CLASS_STATS_TABLE[char_class.value]["xp_reward_base"]
         max_weight = self.CLASS_STATS_TABLE[char_class.value]["max_weight"]
         self.inventory = Inventory(max_weight=max_weight)
@@ -196,11 +201,10 @@ class Character:
         self.current_xp += amount
         logger.info("%s gained %d XP. Current XP: %d", self.name, amount, self.current_xp)
         while True:
-            level_up_threshold = int(self.level * 100 * self.XP_MULTIPLIER)
-            if self.current_xp < level_up_threshold:
+            if self.current_xp < self.level_up_threshold:
                 break
             self.level+=1
-            self.current_xp -= level_up_threshold
+            self.current_xp -= self.level_up_threshold
             self.base_health += int(self.base_health * 0.1)  # Increase base health by 10%
             self.base_attack += int(self.base_attack * 0.1)  # Increase base attack by 10%
             self.base_defense += int(self.base_defense * 0.1)  # Increase base defense by 10%

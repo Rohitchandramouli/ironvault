@@ -1,9 +1,7 @@
 """
 IronVault public API.
-Exposes the core classes, enums, exceptions, and functions of the IronVault
-turn-based RPG engine as a unified package interface.
-Importers can access all engine functionality via `from Ironvault import ...`
-without needing to know the internal module structure.
+Exposes the core classes, enums, exceptions, and functions of the IronVault turn-based RPG engine as a unified package interface.
+Importers can access all engine functionality via `from Ironvault import ...` without needing to know the internal module structure.
 """
 
 from Ironvault.items import (

@@ -164,7 +164,7 @@ class Inventory:
 
     def __repr__(self) -> str:
         """Returns a string representation of the inventory."""
-        return f"Inventory(items={len(self)}, weight={self.total_weight:.2f}/{self.max_weight:.2f}kg)"
+        return f"Inventory(items={len(self)}, Weight={self.total_weight:.2f}/{self.max_weight:.2f}kg)"
 
     def add_item(self, item: Item) -> None:
         """Adds an item to the inventory if it doesn't exceed max weight."""
