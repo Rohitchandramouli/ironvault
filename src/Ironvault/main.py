@@ -9,7 +9,8 @@ import logging
 import json
 from random import choice as random_choice
 
-from Ironvault.items import Rarity, Item, Weapon, Armour, Accessory, Potion, RepairKit
+from Ironvault import character
+from Ironvault.items import Rarity, Weapon, Armour, Accessory, Potion, RepairKit
 from Ironvault.inventory import Inventory, InventoryFullError
 from Ironvault.character import Character, CharacterClass
 from Ironvault.combat import combat, CombatResult, NormalDamage
@@ -38,10 +39,8 @@ def load_game(filename: str) -> Character:
             data = json.load(f)
             return Character.from_dict(data)
     except (json.JSONDecodeError, KeyError) as e:
-        logger.error("Failed to load game: %s", e)
         raise CorruptSaveError("The save file is corrupted or malformed.") from e
     except FileNotFoundError:
-        logger.error("Save file not found: %s", filename)
         raise CorruptSaveError(f"Save file not found: {filename}")
     except Exception as e:
         logger.error("Failed to load game: %s", e)
@@ -49,7 +48,7 @@ def load_game(filename: str) -> Character:
 
 def show_character_status(character: Character) -> None:
     """Display the character's current status."""
-    print(f"\nCharacter Status:")
+    print("\nCharacter Status:")
     print(f"Name: {character.name}")
     print(f"Class: {character.char_class.value}")
     print(f"Level: {character.level}")
@@ -69,16 +68,17 @@ def loot_room(character: Character, source_inventory: Inventory, header: str = "
     for item in source_inventory.loot_drop():
         try:
             print(f"\nYou found: {item.name} ({item.rarity.fullname})")
+            print(f"  Inventory: {character.inventory.total_weight:.2f}/{character.inventory.max_weight:.2f}kg used")
             if isinstance(item, Weapon):
-                print(f"  Attack Power: {item.attack_power} | Durability: {item.durability}/{item.max_durability}")
+                print(f"  Attack Power: {item.attack_power} | Durability: {item.durability}/{item.max_durability} | Weight: {item.weight:.2f}kg")
             elif isinstance(item, Armour):
-                print(f"  Defense Rating: {item.defense_rating} | Durability: {item.durability}/{item.max_durability}")
+                print(f"  Defense Rating: {item.defense_rating} | Durability: {item.durability}/{item.max_durability} | Weight: {item.weight:.2f}kg")
             elif isinstance(item, Accessory):
-                print(f"  Bonus: {item.bonus_type.value} +{item.bonus_percentage:.1%}")
+                print(f"  Bonus: {item.bonus_type.value} +{item.bonus_percentage:.1%} | Weight: {item.weight:.2f}kg")
             elif isinstance(item, Potion):
-                print(f"  Heals: {item.heal_amount} HP")
+                print(f"  Heals: {item.heal_amount} HP | Weight: {item.weight:.2f}kg")
             elif isinstance(item, RepairKit):
-                print(f"  Repairs: {item.repair_amount} durability")
+                print(f"  Repairs: {item.repair_amount} durability | Weight: {item.weight:.2f}kg")
             choice = input("Pick it up? (y/n): ").strip().lower()
             if choice == 'y':
                 character.inventory.add_item(item)
@@ -215,7 +215,10 @@ def run() -> None:
     """Entry point for the IronVault engine."""
     logging.basicConfig(
         level=logging.INFO,
-        format="%(asctime)s — %(name)s — %(levelname)s — %(message)s"
+        format="%(asctime)s — %(name)s — %(levelname)s — %(message)s",
+        handlers=[
+            logging.FileHandler("ironvault.log", encoding="utf-8"),
+        ]
     )
     print("Welcome to IronVault!")
     while True:
@@ -260,10 +263,9 @@ def run() -> None:
                 break
             except CorruptSaveError as e:
                 print(f"Could not load save: {e}")
-                logger.error("Corrupt save file: %s", filename)
                 continue  # Restart the menu on error
             except Exception as e:
-                logger.error("Error occurred while loading game: %s", e)
+                print("An unexpected error occurred. Please try again.")
                 continue  # Restart the menu on error
         elif choice == '3':
             print("Exiting game. Goodbye!")

@@ -6,7 +6,7 @@ import os
 import pytest
 from Ironvault.character import Character, CharacterClass
 from Ironvault.items import Item
-from main import save_game, load_game, CorruptSaveError
+from Ironvault.main import save_game, load_game, CorruptSaveError
 
 
 def test_character_to_dict_from_dict_round_trips_correctly(warrior, common_weapon):

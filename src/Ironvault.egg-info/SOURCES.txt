@@ -4,10 +4,15 @@ src/Ironvault/character.py
 src/Ironvault/combat.py
 src/Ironvault/inventory.py
 src/Ironvault/items.py
+src/Ironvault/main.py
 src/Ironvault.egg-info/PKG-INFO
 src/Ironvault.egg-info/SOURCES.txt
 src/Ironvault.egg-info/dependency_links.txt
 src/Ironvault.egg-info/entry_points.txt
 src/Ironvault.egg-info/requires.txt
 src/Ironvault.egg-info/top_level.txt
+tests/test_character.py
+tests/test_combat.py
+tests/test_inventory.py
 tests/test_items.py
+tests/test_save_load.py
