@@ -263,7 +263,7 @@ def run() -> None:
             except CorruptSaveError as e:
                 print(f"Could not load save: {e}")
                 continue  # Restart the menu on error
-            except Exception as e:
+            except Exception:
                 print("An unexpected error occurred. Please try again.")
                 continue  # Restart the menu on error
         elif choice == '3':
