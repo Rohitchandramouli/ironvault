@@ -223,20 +223,20 @@ class Inventory:
             item_class = choice(item_types)
             rarity = choice(rarities)
             if item_class is Weapon:
-                name = choice(ITEM_NAMES[Weapon][rarity])
+                name = choice(ITEM_NAMES[Weapon][rarity])      # type: ignore[index]
                 yield Weapon(name=name, rarity=rarity)
             elif item_class is Armour:
-                name = choice(ITEM_NAMES[Armour][rarity])
+                name = choice(ITEM_NAMES[Armour][rarity])      # type: ignore[index]
                 yield Armour(name=name, rarity=rarity)
             elif item_class is Accessory:
-                name = choice(ITEM_NAMES[Accessory][rarity])
+                name = choice(ITEM_NAMES[Accessory][rarity])    # type: ignore[index]
                 bonus_type = choice(list(BonusType))
                 yield Accessory(name=name, rarity=rarity, bonus_type=bonus_type)
             elif item_class is Potion:
-                name = choice(ITEM_NAMES[Potion])
+                name = choice(ITEM_NAMES[Potion])              # type: ignore[index]
                 yield Potion(name=name, rarity=rarity, heal_amount=50)
             elif item_class is RepairKit:
-                name = choice(ITEM_NAMES[RepairKit])
+                name = choice(ITEM_NAMES[RepairKit])           # type: ignore[index]
                 yield RepairKit(name=name, rarity=rarity, repair_amount=30)
 
     def to_dict(self) -> dict[str, Any]:

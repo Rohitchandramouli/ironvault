@@ -165,7 +165,7 @@ def fight_enemy(character: Character) -> bool:
     if result.winner == character:
         print(f"\nYou defeated {enemy.name} in {result.turn_count} turns!")
         logger.info("%s won against %s in %d turns.", character.name, enemy.name, result.turn_count)
-        character.gain_xp(enemy.xp_reward_base * enemy.level)
+        character.gain_xp(int(enemy.xp_reward_base * enemy.level))
         loot_room(character, result.defeated.inventory, header=f"You search {enemy.name}'s remains...")
         return True  # Player won
     else:

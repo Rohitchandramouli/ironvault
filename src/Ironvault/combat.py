@@ -100,5 +100,5 @@ def combat(char_a: Character, char_b: Character, strategy: DamageStrategy = Norm
         winner=winner,
         defeated=defeated,
         turn_count=turn_count,
-        final_health={char_a.name: char_a.health, char_b.name: char_b.health}
+        final_health={char_a.name: int(char_a.health), char_b.name: int(char_b.health)}
     )
