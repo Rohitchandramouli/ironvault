@@ -1,8 +1,19 @@
-ironvault.log
+# Python cache
+__pycache__/
+*.pyc
 .pytest_cache/
 .ruff_cache/
+.mypy_cache/
+
+# Environment
+.venv/
+
+# Build and distribution
+src/*.egg-info/
+
+# Logs
+ironvault.log
+savefile.json
+
+# VS Code
 .vscode/
-__pycache__/
-src/Ironvault/__pycache__/
-tests/__pycache__/**
-Beginning.json

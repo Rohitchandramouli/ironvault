@@ -9,7 +9,6 @@ import logging
 import json
 from random import choice as random_choice
 
-from Ironvault import character
 from Ironvault.items import Rarity, Weapon, Armour, Accessory, Potion, RepairKit
 from Ironvault.inventory import Inventory, InventoryFullError
 from Ironvault.character import Character, CharacterClass
