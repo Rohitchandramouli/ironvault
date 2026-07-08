@@ -9,7 +9,7 @@ __pycache__/
 .venv/
 
 # Build and distribution
-src/*.egg-info/
+src/Ironvault.egg-info/
 
 # Logs
 ironvault.log
