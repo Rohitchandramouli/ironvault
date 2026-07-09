@@ -86,7 +86,7 @@ class Character:
     @property
     def effective_attack(self) -> float:
         """Calculate the effective attack value of the character."""
-        bonus = 0
+        bonus: float = 0
         if self.equipped_weapon and self.equipped_weapon.durability > 0:
             bonus += self.equipped_weapon.attack_power
         if self.equipped_accessory and self.equipped_accessory.bonus_type == BonusType.ATTACK:
@@ -96,7 +96,7 @@ class Character:
     @property
     def effective_defense(self) -> float:
         """Calculate the effective defense value of the character."""
-        bonus = 0
+        bonus: float = 0
         if self.equipped_armour and self.equipped_armour.durability > 0:
             bonus += self.equipped_armour.defense_rating
         if self.equipped_accessory and self.equipped_accessory.bonus_type == BonusType.DEFENSE:
