@@ -1,0 +1,31 @@
+2026-07-10 00:05:25,491 — Ironvault.inventory — INFO — Added Worn Shortsword to inventory.
+2026-07-10 00:05:25,492 — Ironvault.character — INFO — Yuesha equipped weapon: Worn Shortsword. Attack: 25 → 40
+2026-07-10 00:05:25,493 — Ironvault.main — INFO — New game started with character: Yuesha, Class: CHAMPION,Inventory: Inventory(items=1, weight=2.82/30.00kg)
+2026-07-10 00:05:31,727 — Ironvault.combat — INFO — Yuesha attacks Enemy GLADIATOR for 25 damage. Enemy GLADIATOR has 135 health left.
+2026-07-10 00:05:31,727 — Ironvault.combat — INFO — Enemy GLADIATOR attacks Yuesha for 0 damage. Yuesha has 95 health left.
+2026-07-10 00:05:31,728 — Ironvault.combat — INFO — Yuesha attacks Enemy GLADIATOR for 25 damage. Enemy GLADIATOR has 110 health left.
+2026-07-10 00:05:31,728 — Ironvault.combat — INFO — Enemy GLADIATOR attacks Yuesha for 0 damage. Yuesha has 95 health left.
+2026-07-10 00:05:31,728 — Ironvault.combat — INFO — Yuesha attacks Enemy GLADIATOR for 25 damage. Enemy GLADIATOR has 85 health left.
+2026-07-10 00:05:31,728 — Ironvault.combat — INFO — Enemy GLADIATOR attacks Yuesha for 0 damage. Yuesha has 95 health left.
+2026-07-10 00:05:31,728 — Ironvault.combat — INFO — Yuesha attacks Enemy GLADIATOR for 25 damage. Enemy GLADIATOR has 60 health left.
+2026-07-10 00:05:31,728 — Ironvault.combat — INFO — Enemy GLADIATOR attacks Yuesha for 0 damage. Yuesha has 95 health left.
+2026-07-10 00:05:31,728 — Ironvault.combat — INFO — Yuesha attacks Enemy GLADIATOR for 25 damage. Enemy GLADIATOR has 35 health left.
+2026-07-10 00:05:31,728 — Ironvault.combat — INFO — Enemy GLADIATOR attacks Yuesha for 0 damage. Yuesha has 95 health left.
+2026-07-10 00:05:31,729 — Ironvault.combat — INFO — Yuesha attacks Enemy GLADIATOR for 25 damage. Enemy GLADIATOR has 10 health left.
+2026-07-10 00:05:31,729 — Ironvault.combat — INFO — Enemy GLADIATOR attacks Yuesha for 0 damage. Yuesha has 95 health left.
+2026-07-10 00:05:31,729 — Ironvault.combat — INFO — Yuesha attacks Enemy GLADIATOR for 25 damage. Enemy GLADIATOR has 0 health left.
+2026-07-10 00:05:31,729 — Ironvault.combat — INFO — Combat ended. Yuesha has 95 health left. Enemy GLADIATOR has 0 health left.Combat ended in 13 turns. Winner: Yuesha, Defeated: Enemy GLADIATOR
+2026-07-10 00:05:31,729 — Ironvault.main — INFO — Yuesha won against Enemy GLADIATOR in 13 turns.
+2026-07-10 00:05:31,729 — Ironvault.character — INFO — Yuesha gained 110 XP. Current XP: 110
+2026-07-10 00:05:31,729 — Ironvault.character — INFO — Yuesha's current XP after processing: 110
+2026-07-10 00:05:41,526 — Ironvault.inventory — INFO — Added Ripped Gambeson to inventory.
+2026-07-10 00:05:43,015 — Ironvault.inventory — INFO — Added Colossal Maul to inventory.
+2026-07-10 00:05:44,406 — Ironvault.inventory — INFO — Added The Undying Bastion Emblem to inventory.
+2026-07-10 00:05:45,543 — Ironvault.inventory — INFO — Added Giant-Slayer's Girdle to inventory.
+2026-07-10 00:06:08,327 — Ironvault.character — INFO — Yuesha equipped accessory: Giant-Slayer's Girdle. Attack: 40 → 40
+2026-07-10 00:06:08,328 — Ironvault.character — INFO — Yuesha equipped accessory: Giant-Slayer's Girdle. Defense: 40 → 40
+2026-07-10 00:06:19,327 — Ironvault.character — INFO — Yuesha equipped accessory: The Undying Bastion Emblem. Attack: 40 → 40
+2026-07-10 00:06:19,327 — Ironvault.character — INFO — Yuesha equipped accessory: The Undying Bastion Emblem. Defense: 40 → 40
+2026-07-10 00:06:40,047 — Ironvault.character — INFO — Yuesha equipped weapon: Colossal Maul. Attack: 40 → 113
+2026-07-10 00:06:52,567 — Ironvault.character — INFO — Yuesha equipped armour: Ripped Gambeson. Defense: 40 → 66
+2026-07-10 00:07:04,553 — Ironvault.main — INFO — Game saved successfully to beginning.

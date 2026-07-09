@@ -5,6 +5,7 @@ Also defines CorruptSaveError for malformed save file handling.
 Has no game logic of its own — coordinates Character, Inventory, Item, and combat systems to produce a complete playthrough.
 """
 
+import os
 import logging
 import json
 from random import choice as random_choice
@@ -16,6 +17,9 @@ from Ironvault.combat import combat, CombatResult, NormalDamage
 
 
 logger = logging.getLogger(__name__)
+log_dir = os.path.join(os.path.dirname(__file__), "..", "logs")
+os.makedirs(log_dir, exist_ok=True)
+log_path = os.path.join(log_dir, "ironvault.log")
 
 class CorruptSaveError(RuntimeError):
     """Raised when a save file is found to be malformed or corrupted."""
@@ -216,7 +220,7 @@ def run() -> None:
         level=logging.INFO,
         format="%(asctime)s — %(name)s — %(levelname)s — %(message)s",
         handlers=[
-            logging.FileHandler("ironvault.log", encoding="utf-8"),
+            logging.FileHandler(log_path, encoding="utf-8"),
         ]
     )
     print("Welcome to IronVault!")

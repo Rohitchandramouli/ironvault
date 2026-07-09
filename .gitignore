@@ -12,7 +12,7 @@ __pycache__/
 src/Ironvault.egg-info/
 
 # Logs
-ironvault.log
+src/Ironvault/logs/
 savefile.json
 
 # VS Code

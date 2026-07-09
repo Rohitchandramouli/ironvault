@@ -1,0 +1,94 @@
+{
+  "name": "Yuesha",
+  "char_class": "CHAMPION",
+  "level": 1,
+  "current_xp": 110,
+  "health": 95,
+  "xp_reward_base": 105,
+  "base_health": 95,
+  "base_attack": 25,
+  "base_defense": 40,
+  "equipped_weapon": {
+    "type": "Weapon",
+    "name": "Colossal Maul",
+    "rarity": "RARE",
+    "weight": 3.51,
+    "attack_power": 88,
+    "max_durability": 47,
+    "durability": 47,
+    "is_equipped": true
+  },
+  "equipped_armour": {
+    "type": "Armour",
+    "name": "Ripped Gambeson",
+    "rarity": "COMMON",
+    "weight": 10.82,
+    "defense_rating": 26,
+    "max_durability": 4,
+    "durability": 4,
+    "is_equipped": true
+  },
+  "equipped_accessory": {
+    "type": "Accessory",
+    "name": "The Undying Bastion Emblem",
+    "rarity": "LEGENDARY",
+    "weight": 0.44,
+    "bonus_type": "Health",
+    "bonus_percentage": 0.0,
+    "is_equipped": true
+  },
+  "inventory": {
+    "max_weight": 30.0,
+    "gear": [
+      {
+        "type": "Weapon",
+        "name": "Worn Shortsword",
+        "rarity": "COMMON",
+        "weight": 2.82,
+        "attack_power": 15,
+        "max_durability": 17,
+        "durability": 10,
+        "is_equipped": false
+      },
+      {
+        "type": "Armour",
+        "name": "Ripped Gambeson",
+        "rarity": "COMMON",
+        "weight": 10.82,
+        "defense_rating": 26,
+        "max_durability": 4,
+        "durability": 4,
+        "is_equipped": true
+      },
+      {
+        "type": "Weapon",
+        "name": "Colossal Maul",
+        "rarity": "RARE",
+        "weight": 3.51,
+        "attack_power": 88,
+        "max_durability": 47,
+        "durability": 47,
+        "is_equipped": true
+      },
+      {
+        "type": "Accessory",
+        "name": "The Undying Bastion Emblem",
+        "rarity": "LEGENDARY",
+        "weight": 0.44,
+        "bonus_type": "Health",
+        "bonus_percentage": 0.0,
+        "is_equipped": true
+      },
+      {
+        "type": "Accessory",
+        "name": "Giant-Slayer's Girdle",
+        "rarity": "EPIC",
+        "weight": 0.12,
+        "bonus_type": "Attack",
+        "bonus_percentage": 0.0,
+        "is_equipped": false
+      }
+    ],
+    "consumables": []
+  }
+}
