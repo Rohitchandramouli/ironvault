@@ -110,6 +110,7 @@ classDiagram
     }
     class Consumable {
         <<abstract>>
+        +use(character)* bool
     }
     class Potion { +heal_amount int }
     class RepairKit { +repair_amount int }
@@ -125,8 +126,12 @@ classDiagram
         +loot_drop()
     }
     class DamageStrategy { <<abstract>> }
-    class NormalDamage
-    class CriticalDamage
+    class NormalDamage {
+    +apply(attacker, defender) float
+    }
+    class CriticalDamage {
+        +apply(attacker, defender) float
+    }
 
     Item <|-- Gear
     Item <|-- Consumable
@@ -166,11 +171,12 @@ flowchart TD
 
 ## Project Structure
 
-```
+```text
 ironvault/
 ├── src/
 │   └── Ironvault/
 │       ├── __init__.py         # Public API surface
+|       ├── main.py             # Entry point → run()
 │       ├── items.py            # Item hierarchy, enums, factory
 │       ├── inventory.py        # Container, generator, dunders
 │       ├── character.py        # Agent, stats, progression
@@ -188,7 +194,6 @@ ironvault/
 │   └── Future-Extensions.md    # Deferred features with reasoning
 ├── .github/
 │   └── workflows/ci.yml        # pytest + ruff + mypy on every push
-├── main.py                     # Entry point → run()
 ├── pyproject.toml
 ├── requirements.txt
 └── LICENSE
@@ -223,7 +228,7 @@ pytest tests/ -v
 ```
 
 | File | Tests | What it covers |
-|------|-------|----------------|
+| ------ | ------- | ---------------- |
 | `test_items.py` | 6 | `use()`, `degrade()`, `BrokenItemError`, `from_dict()` round-trip |
 | `test_inventory.py` | 10 | routing, weight limits, `__len__`, `__contains__`, `__iter__`, `loot_drop()` |
 | `test_character.py` | 8 | effective stats, broken gear, `gain_xp()`, level-up stat increase |
@@ -248,7 +253,7 @@ Fixtures use fixed deterministic values — reproducible regardless of random ge
 
 Every push and pull request runs:
 
-```
+```text
 checkout → setup Python 3.11 → pip install -e .[dev] → pytest -v → ruff check → mypy
 ```
 
@@ -261,7 +266,7 @@ All three gates must pass. See [`.github/workflows/ci.yml`](.github/workflows/ci
 The deeper detail lives in `docs/`:
 
 | Document | Contents |
-|----------|----------|
+| ---------- | ---------- |
 | [`docs/Architecture.md`](docs/Architecture.md) | Module reference, class stats table, rarity scaling tables, item hierarchy internals, public API surface |
 | [`docs/Engineering-Decisions.md`](docs/Engineering-Decisions.md) | All 27 original design decisions plus every decision that changed during implementation, with reasoning |
 | [`docs/Future-Extensions.md`](docs/Future-Extensions.md) | Deferred features with design notes and clear implementation paths |
