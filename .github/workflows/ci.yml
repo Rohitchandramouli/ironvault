@@ -8,19 +8,19 @@ on:
 
 jobs:
     test-and-lint:
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-24.04
 
         steps:
             # 1. Checkout the source code
             - name: Checkout Repository
-              uses: actions/checkout@v4
+              uses: actions/checkout@v4.2.2
 
             # 2. Setup Python environment
             - name: Set up Python 3.11.9
-              uses: actions/setup-python@v5
+              uses: actions/setup-python@v5.4.0
               with:
                 python-version: "3.11.9"
-                cache: "pip"         # Speeds up subsequent runs by caching dependencies
+                cache: "pip"
 
             # 3. Upgrade pip and install package alongside dev tools via pyproject.toml flags
             - name: Install Dependencies
