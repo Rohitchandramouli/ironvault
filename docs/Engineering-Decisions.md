@@ -1,307 +1,302 @@
 # Engineering Decisions
 
-Every architectural decision in IronVault was made before implementation began. This document records what was decided, why, and what changed during implementation. It is organized by file in dependency order.
+> Every decision in IronVault was made before implementation began. This document records what was decided, why, and what changed during the build — and why those changes were made too.
 
 ---
 
-## Original Design Decisions — Made Before Implementation
+## How to Read This Document
 
-These 27 decisions were locked in during the design phase. None were changed without explicit reasoning documented in the implementation section below.
+The decisions are organized in two layers:
 
-**1. Dependency direction is strictly one-way**
-`items.py → inventory.py → character.py → combat.py → main.py`. No file imports from anything above it in the chain. Prevents circular imports, keeps each module independently testable, makes responsibility unambiguous.
+1. **Original design decisions** — the 27 architectural choices locked in before a single line of code was written
+2. **Implementation decisions** — what changed during the build, and why
 
-**2. Composition over inheritance for `Character`**
-`Character` *has* an `Inventory`, it does not extend one. Inheritance would couple every `Character` method to every `Inventory` method — a fragile coupling that makes the class harder to reason about and extend.
-
-**3. Abstract base classes over duck typing**
-`Item`, `Gear`, `Consumable`, and `DamageStrategy` are all abstract. Contracts need to be enforced at class definition time, not discovered at runtime when a missing method causes an unexpected `AttributeError` mid-combat.
-
-**4. `Item` is lean by design**
-`Item` only defines what is genuinely true of every single item: `name`, `rarity`, `weight`, and the three abstract method contracts. A generic shared `condition` field that subclasses reinterpret was explicitly rejected as crowding the base class with irrelevant state.
-
-**5. `Gear` exists purely for equip/unequip behavior**
-`Gear` does not hold `durability` — that lives on `Weapon` and `Armour` individually because `Accessory` has no durability concept. `Gear`'s only job is to represent "this item is equippable."
-
-**6. Durability range is shared between `Weapon` and `Armour`**
-Both scale off the same rarity-based durability table since the lifecycle concept is identical. This also keeps attack and defense balanced for the subtraction damage formula.
-
-**7. Rarity scales stats, not weight**
-Weight is a physical property of what an item is, not how powerful it is. A Legendary potion is not heavier than a Common one. Weight ranges are defined locally per subclass.
-
-**8. Centralize when shared, keep local when independent**
-The rarity scaling tables are centralized because multiple subclasses read the same values. Weight ranges are kept local because each subclass has independent values with no shared logic.
-
-**9. `degrade()` is abstract on `Item` even for `Accessory`**
-`Accessory`'s `degrade()` is a deliberate no-op. Making it abstract signals that every item in this world has a lifecycle, even if some choose not to act on it.
-
-**10. `use()` contract is uniform, with one justified exception**
-Every item's `use()` takes `character` as its only parameter. `RepairKit` is the single exception — it adds `select_target()` as a separate method called before `use()`, rather than breaking the uniform signature. This keeps the polymorphic contract intact while preserving player agency.
-
-**11. `Consumable` signals its own removal via return value**
-`Consumable.use()` returns `True` to signal "remove me from inventory." The alternative — holding a back-reference to the `Inventory` — would create a dependency from `items.py` upward to `inventory.py`, violating the one-way chain.
-
-**12. `loot_drop()` has no side effects**
-The generator yields items and does nothing else. The caller decides what to do with each one, including whether to handle `InventoryFullError` mid-loop. Keeps "generating loot" and "managing capacity" as separate concerns.
-
-**13. Inventory stores gear and consumables in separate private lists**
-Type-based routing at `add_item()` time. The lists are private; `gear` and `consumables` are properties returning copies, protecting internal state from external mutation.
-
-**14. Equipped items stay in inventory**
-When gear is equipped, it stays in `_gear` with `is_equipped = True`. One source of truth for everything a character possesses. Two lists tracking the same items would be a synchronization bug waiting to happen.
-
-**15. Single equipment slot per gear type**
-One weapon, one armour, one accessory. Equipping a new item unequips the previous occupant. Dual-wielding explicitly deferred.
-
-**16. Broken gear silently degrades stats, not crashes combat**
-When durability hits zero, `effective_attack` and `effective_defense` silently exclude the broken item's bonus via a durability check inside the property. The item stays equipped but contributes nothing. `BrokenItemError` only fires if `use()` is called directly on a broken item.
-
-**17. Bare-fisted and unarmoured are explicit states**
-A character with no weapon, or a broken weapon, is explicitly labeled "bare-fisted" in combat output. Same for armour. Player-facing clarity, not just a fallback.
-
-**18. Accessory bonus applies to base stat only**
-Applying the bonus to the already-equipment-modified effective stat would make equip order matter. Applying to `base_attack` / `base_defense` only makes the calculation order-independent.
-
-**19. `CharacterClass` sets starting stats only**
-Class identity determines starting values. It does not restrict equipment choices or change how stats are calculated. Equipment restrictions are flavor only.
-
-**20. `Character` serves as both player and enemy**
-There is no separate `Enemy` class. Both are `Character` instances. `combat()` operates only against the `Character` interface. Avoids duplicating logic.
-
-**21. XP scales by defeated enemy's class and level**
-`xp_awarded = defeated.xp_reward_base * defeated.level`. Makes enemy class identity mechanically meaningful beyond combat stats.
-
-**22. Level-up applies flat percentage stat increase**
-All three stats grow by 10% on level-up regardless of class. Per-class growth rates were considered and explicitly deferred.
-
-**23. `Item.from_dict()` as centralized construction**
-All item construction flows through this single classmethod factory. Prevents construction logic from being scattered across `loot_drop()`, `load_game()`, and any future spawning system.
-
-**24. Strategy pattern for damage calculation**
-`DamageStrategy` with `NormalDamage` and `CriticalDamage` means `combat()`'s turn loop never changes when new damage types are added. Open for extension, closed for modification.
-
-**25. Logging over print for internal system events**
-`print()` is reserved for player-facing narrative output. All internal system events use `logging.INFO` or `logging.WARNING`. Two separate concerns, never mixed.
-
-**26. Save/load via JSON with context managers**
-Game state serializes to JSON via `to_dict()` / `from_dict()` round-tripping. File operations use context managers. `CorruptSaveError` fires on malformed or missing fields.
-
-**27. Packaging as an installable engine**
-`pyproject.toml` makes IronVault installable via `pip install -e .` and exposes an `ironvault` console command. Presents the project as a small framework, not a script.
+Both matter. The original decisions show how the system was designed. The implementation decisions show what reality looked like when design met code.
 
 ---
 
-## Implementation Decisions — `items.py`
+## Original Design Decisions
 
-### Added During Implementation
-
-**1. `Rarity` stores shorthand and fullname via custom `__init__`**
-Tuple value `("C", "Common")` unpacked into `.shorthand` and `.fullname` attributes. Readable access rather than index-based `value[0]` and `value[1]`.
-
-**2. `BonusType` stores full name as string value**
-String value serves as the outer key into `Accessory.BONUS_RANGES` and is serialized directly in `to_dict()`. Reconstruction uses `BonusType(data["bonus_type"])` — lookup by value, not by name.
-
-**3. `Gear.STAT_RANGES` replaces separate `Weapon.ATTACK_RANGES` and `Armour.DEFENSE_RANGES`**
-Merged into one shared table on `Gear` since Weapon and Armour use identical numerical bounds, justified by the subtraction damage formula requiring balanced ranges.
-
-**4. `max_durability` added to `Weapon` and `Armour`**
-Required for the `RepairKit` cap mechanic. `max_durability` is rolled once at creation and never changes. `durability` starts equal to `max_durability` and degrades with use.
-
-**5. Percentage-based `degrade()` — `max(1, int(durability * 0.05))`**
-5% of current durability per use, floored at 1. Achieves rarity-based behavior naturally — higher durability items degrade slower in absolute terms — without a separate per-rarity degradation table.
-
-**6. Optional parameters on `Weapon` and `Armour` `__init__`**
-`attack_power`, `max_durability`, `durability` all `int | None = None`. When `None`, stats are randomly generated from rarity tables. When provided (via `from_dict()`), saved values are restored exactly. Uses `is not None` check rather than `or` to avoid treating legitimate `0` values as falsy.
-
-**7. Optional `weight` and `bonus_percentage` on subclass `__init__`**
-Same pattern — generate randomly at creation, but preserve exact values through save/load.
-
-**8. `WEIGHT_RANGE` class variable on every concrete subclass**
-Originally a free parameter passed by the caller. Changed to intrinsic property generated internally per subclass from a fixed range.
-
-**9. `logger.warning()` before `BrokenItemError`**
-Fires immediately before the exception is raised so the log record exists even if the exception is caught upstream.
-
-**10. `from_dict()` placed on `Item` before subclasses in file**
-Works correctly because `from_dict()` body only executes at call time — by then all subclasses exist in the module namespace. The apparent forward-reference is intentional.
-
-**11. `heal()` method implicitly required on `Character`**
-`Potion.use()` calls `character.heal(self.heal_amount)`. `Character` must implement `heal()` — not in the original design spec, added as a required method to preserve the dependency direction.
-
-### Changed During Implementation
-
-**12. `Consumable.use()` changed from concrete to abstract**
-Originally a concrete method returning `True`. Changed to `@abstractmethod` — forcing every subclass to explicitly implement it.
-
-**13. `select_target()` removed from `RepairKit`**
-Target selection responsibility moved to `main.py`, which sets `repair_kit.selected_target` directly. Keeps `items.py` free of any UI logic.
-
-### Removed During Implementation
-
-**14. `potency` removed from `Potion`**
-Dropped because consumables were redesigned as fixed-value items and "time" in a CLI turn-based game has no natural clock to tie decay to.
-
-**15. Consumables are not rarity-scaled**
-`heal_amount` and `repair_amount` are fixed parameters at creation. Rarity is still tracked but has no mechanical effect on consumable stats.
+### Structural Decisions
 
 ---
 
-## Implementation Decisions — `inventory.py`
+**1 — One-way dependency direction**
 
-### Added During Implementation
+`items.py → inventory.py → character.py → combat.py → main.py`
 
-**1. `ITEM_NAMES` constant with pyramid pool structure**
-Module-level constant mapping each concrete item class to a name pool per rarity tier. Pyramid structure — 15 Common weapon names, 4 Legendary weapon names — so Legendary items feel rarer by name distinctiveness, not just stats.
+No file imports from anything above it in the chain. This was enforced as a constraint before implementation began — not discovered through refactoring.
 
-**2. `to_dict()` and `from_dict()` added to `Inventory`**
-Not in original design. `Character.to_dict()` was meant to handle inventory serialization directly. Added for cleaner encapsulation — `Inventory` owns its own serialization.
-
-**3. `TypeError` branch in `add_item()` and `remove_item()`**
-Defensive programming — if something that is neither `Gear` nor `Consumable` is passed in, raises `TypeError` with `logger.error()`.
-
-**4. Membership check in `equip()` and `unequip()`**
-Before delegating to `character.equip_gear()`, verifies the item actually exists in `_gear`. Prevents equipping items that were never added to inventory.
-
-### Changed During Implementation
-
-**5. `loot_drop()` constructs directly, not via `Item.from_dict()`**
-Direct concrete subclass construction is cleaner for fresh random generation. `Item.from_dict()` is designed for reconstruction from saved data with all fields provided.
-
-**6. `equip()`/`unequip()` delegate to `character.equip_gear()`/`character.unequip_gear()`**
-Originally intended to call `item.equip(character)`. Changed to call character methods instead — slot management responsibility belongs on `Character` since `Character` owns the slot state.
+*Why it matters:* Every module can be imported, tested, and reasoned about in isolation. If `items.py` needed to know about `Character`, that would be a design problem, not a missing import.
 
 ---
 
-## Implementation Decisions — `character.py`
+**2 — Composition over inheritance for `Character`**
 
-### Added During Implementation
+`Character` *has* an `Inventory`. It does not extend one.
 
-**1. `heal()` method**
-Required by `Potion.use()`. Capped at `base_health`. No logging inside `heal()` — output handled by `use_consumable()`.
-
-**2. `use_consumable()` method**
-Single clean entry point for all consumable usage. Checks membership, calls `item.use(self)`, removes from inventory, logs per type.
-
-**3. `xp_reward_base` as instance attribute**
-Stored on `self` for direct access by `combat.py`. Serialized in `to_dict()` and restored in `from_dict()`.
-
-**4. Before/after stat change display on equip**
-Snapshot before slot assignment, then both `print()` for player-facing output and `logger.info()` for engine diagnostics after equipping.
-
-**5. Full health restore on level-up**
-Standard RPG convention. Makes level-up feel like a meaningful reward moment.
-
-**6. `cast()` for equipped item reconstruction in `from_dict()`**
-`Item.from_dict()` returns `Item` — Pylance cannot verify the specific subclass. `cast()` resolves static analysis warnings without changing runtime behavior.
-
-**7. `level_up_threshold` added as `@property`**
-Originally calculated inline in `gain_xp()`. Made a property so `main.py` can display XP progress without duplicating the formula.
-
-### Changed During Implementation
-
-**8. `char_class` instead of `character_class`**
-Shortened for readability. Consistent throughout the file.
-
-**9. `equip()` renamed to `equip_gear()`, `unequip()` to `unequip_gear()`**
-More explicit. Matches the method names referenced in `inventory.py`'s delegation calls.
-
-**10. `effective_attack` and `effective_defense` return `float` not `int`**
-Accessory `bonus_percentage` multiplication produces a float. Display uses `:.0f` formatting so players never see decimal places.
-
-**11. XP carries over on level-up**
-Originally designed to reset to 0. Changed to `current_xp -= level_up_threshold` so excess XP carries into the next level. More realistic.
-
-**12. `int()` wrapping on stat increases**
-`base_health * 1.1` produces a float. `int()` wrapping maintains integer stats and prevents type drift across multiple level-ups.
+*Why it matters:* Inheritance would mean every `Character` method also inherits every `Inventory` method — a fragile coupling that makes the class harder to reason about. Composition keeps responsibilities cleanly separated: `Character` is an agent, `Inventory` is a container.
 
 ---
 
-## Implementation Decisions — `combat.py`
+**3 — Abstract base classes over duck typing**
 
-### Added During Implementation
+`Item`, `Gear`, `Consumable`, and `DamageStrategy` are all abstract. You cannot instantiate them directly.
 
-**1. `CombatResult` as a dataclass**
-`@dataclass` auto-generates `__init__`, `__repr__`, and `__eq__`. Clean, minimal, modern Python.
-
-**2. Mid-loop `break` after `char_b` health hits 0**
-Prevents a dead character from attacking back. Not specified in original design.
-
-**3. Broken gear notification fires only the turn durability hits zero**
-Moved check inside the `if durability > 0` block — fires only when `degrade()` causes durability to reach exactly 0 that turn, not on every subsequent turn. Prevents repeated spam.
-
-### Changed During Implementation
-
-**4. `calculate_damage` as module-level function, not staticmethod**
-Has no natural class to belong to in `combat.py`. Module-level function is cleaner and functionally identical.
-
-**5. Return types changed to `float`**
-Consistent with `effective_attack`/`effective_defense` being floats. Health cast back to `int` at application point.
-
-**6. Turn count increments per individual attack**
-Each attack is a discrete event. A fight where both characters attack 5 times each reports `turn_count = 10`.
+*Why it matters:* The contracts here — every `Item` must implement `use()`, `degrade()`, and `to_dict()` — need to fail at class definition time, not at runtime when a missing method causes an unexpected `AttributeError` mid-combat.
 
 ---
 
-## Implementation Decisions — `main.py`
+**4 — `Character` serves as both player and enemy**
 
-### Added During Implementation
+There is no separate `Enemy` class. Both the player and any enemy are `Character` instances.
 
-**1. Full interactive game loop instead of scripted playthrough**
-Original design described a linear demo script. Replaced with a repeating `game_loop()` with player-driven options.
-
-**2. Five helper functions**
-`show_character_status()`, `loot_room()`, `equip_menu()`, `consumable_menu()`, `fight_enemy()` — keeps `game_loop()` readable.
-
-**3. `game_loop()` split from `run()`**
-`run()` handles opening menu only. `game_loop()` handles repeating options. Both new game and load game share the same loop.
-
-**4. `loot_room()` generic `source_inventory` parameter**
-Reusable for both dungeon room looting and post-combat enemy loot drops without duplicating code. Optional `header` parameter for narrative context.
-
-**5. `fight_enemy()` returns `bool`**
-Signals victory/defeat to `game_loop()` so the loop can break cleanly on game over.
-
-**6. `while True` opening menu in `run()` with `continue`/`break`**
-Replaced recursive `return run()` calls — recursion would hit Python's call stack limit on repeated invalid inputs.
-
-### Changed During Implementation
-
-**7. Starter weapon constructed directly, not via `Item.from_dict()`**
-`Weapon(name=..., rarity=Rarity.COMMON)` directly — simpler and more readable for a hardcoded starter item.
-
-**8. Load game removed from `game_loop()` options**
-Reassigning `character` inside `game_loop()` doesn't update the caller's reference in Python. Load game available from opening menu in `run()` only.
+*Why it matters:* `combat()` operates only against the `Character` interface. This avoids duplicating logic and mirrors how real game engines handle entity identity — a Sentinel enemy and a Sentinel player are the same class with different names.
 
 ---
 
-## Implementation Decisions — Tests, Packaging, CI
+**5 — Single equipment slot per gear type**
 
-**1. `conftest.py` with shared fixtures**
-Centralizes test object creation. Fixtures use fixed deterministic values (`attack_power=20`, `max_durability=50`) so tests are reproducible regardless of random seed.
+One weapon slot, one armour slot, one accessory slot. Equipping a new item unequips the previous occupant automatically.
 
-**2. `MagicMock` for item tests**
-Keeps item tests isolated from character implementation. Tests item behavior without depending on `Character`'s internal health management.
+*Why it matters:* Dual-wielding would require slot tracking, conflict resolution, and more complex effective stat calculations. Deferred deliberately — the architecture supports it with minimal changes when ready.
 
-**3. `pytest.approx()` for float comparisons**
-`effective_attack`/`effective_defense` return `float`. Direct `==` comparison fails due to floating point precision.
+---
 
-**4. `cast()` in tests**
-`Item.from_dict()` returns `Item` — subclass-specific attributes need `cast()` to satisfy Pylance without changing runtime behavior.
+### Item Design Decisions
 
-**5. `tmp_path` for save/load tests**
-Built-in pytest fixture. Eliminates hardcoded file paths and manual cleanup.
+---
 
-**6. Tests 1-2 moved from `test_items.py` to `test_inventory.py`**
-`add_item()` routing tests belong in `test_inventory.py` since they test `Inventory` behavior, not `Item` behavior.
+**6 — `Item` is lean by design**
 
-**7. Test 6 replaced**
-"Potion.degrade() reduces potency" → "Potion.use() calls character.heal() with correct heal_amount" — reflects potency being dropped during implementation.
+`Item` only defines what is genuinely true of every single item without exception: `name`, `rarity`, `weight`, and three abstract method contracts.
 
-**8. Package name `Ironvault` not `ironvault`**
-Follows actual folder naming used throughout implementation.
+*Why it matters:* A generic shared `condition` field that all subclasses reinterpret was explicitly rejected. It would crowd the base class with state that only some subclasses use — exactly the kind of thing that makes inheritance hierarchies confusing to navigate.
 
-**9. `[tool.pytest.ini_options]` added to `pyproject.toml`**
-`testpaths` and `pythonpath` ensure pytest finds tests and resolves imports correctly in all environments.
+---
 
-**10. Logging to file with UTF-8 encoding**
-Windows PowerShell's default `cp1252` encoding cannot encode the `→` arrow character used in equip stat-change logs. File logging with `encoding="utf-8"` resolves the `UnicodeEncodeError`.
+**7 — `Gear` exists purely for equip/unequip behavior**
+
+`Gear` does not hold `durability`. That lives on `Weapon` and `Armour` individually, because `Accessory` has no durability concept.
+
+*Why it matters:* Adding durability to `Gear` would force `Accessory` to carry a field it never uses — the same crowding problem avoided in `Item`.
+
+---
+
+**8 — `degrade()` is abstract on `Item` even for `Accessory`**
+
+`Accessory.degrade()` is a deliberate no-op. But it must be implemented.
+
+*Why it matters:* Making it abstract signals that every item in this world has a lifecycle, even if some choose not to act on it. It's a design statement, not just a method.
+
+---
+
+**9 — `use()` contract is uniform, with one justified exception**
+
+Every item's `use()` takes `character` as its only parameter. `RepairKit` is the single exception — it adds `select_target()` as a separate method called *before* `use()`, rather than breaking the uniform signature.
+
+*Why it matters:* `combat()` and `use_consumable()` can call `item.use(character)` on any item without type-checking. The polymorphic contract stays intact. `RepairKit` just has an additional method beyond the shared contract — subclasses are allowed to do more than the base requires.
+
+---
+
+**10 — `Consumable` signals its own removal via return value**
+
+`Consumable.use()` returns `True` to tell the caller "remove me from inventory."
+
+*Why it matters:* The alternative — having the item hold a back-reference to its `Inventory` and remove itself — would create a dependency from `items.py` upward to `inventory.py`, violating the one-way dependency direction. A return value signal keeps the chain intact.
+
+---
+
+**11 — Rarity scales stats, not weight**
+
+Weight is a physical property of what an item *is*. A Legendary potion is not heavier than a Common one.
+
+*Why it matters:* Conflating power with weight would make the game feel arbitrary. A warrior who can't carry a Legendary sword because it's too heavy, despite the sword being functionally better, doesn't make physical sense.
+
+---
+
+**12 — `Item.from_dict()` as single construction point**
+
+All item construction — from `loot_drop()`, from `load_game()`, from `Character.from_dict()` — flows through one classmethod factory.
+
+*Why it matters:* If construction logic lived in each callsite, changes to how items are built would require finding and updating multiple places. One change propagates everywhere automatically.
+
+---
+
+### Inventory Design Decisions
+
+---
+
+**13 — Internal lists are private, properties return copies**
+
+`_gear` and `_consumables` are never exposed directly. The `gear` and `consumables` properties return copies.
+
+*Why it matters:* If external code could do `inventory._gear.append(item)`, it would bypass the weight check in `add_item()` completely. Returning copies makes the violation obvious — appending to a copy does nothing to the real list.
+
+---
+
+**14 — Equipped items stay in inventory**
+
+When gear is equipped, it stays in `_gear` with `is_equipped = True`. It was not moved to a separate holder on `Character`.
+
+*Why it matters:* Two structures tracking the same items would be a synchronization bug waiting to happen. One source of truth, always. `total_weight` correctly includes worn gear because it sums the actual inventory.
+
+---
+
+**15 — `loot_drop()` has no side effects**
+
+The generator yields items and does nothing else. It never calls `add_item()`.
+
+*Why it matters:* "Generating loot" and "managing inventory capacity" are separate concerns. The caller decides what to do with each yielded item — including stopping mid-loot when the bag fills. This also means the same generator works for dungeon rooms and post-combat enemy drops without any changes.
+
+---
+
+### Character Design Decisions
+
+---
+
+**16 — Accessory bonus applies to base stat only**
+
+The accessory percentage is applied to `base_attack` or `base_defense`, not to the effective value after weapon/armour bonuses are added.
+
+*Why it matters:* If the bonus applied to the already-modified effective stat, equip order would matter — equipping the weapon first would give a different result than equipping the accessory first. Base-stat-only makes the calculation order-independent. Same result, any sequence.
+
+---
+
+**17 — Broken gear silently degrades stats, not crashes combat**
+
+When durability hits zero, `effective_attack` and `effective_defense` silently exclude the broken item's bonus. The item stays equipped. `BrokenItemError` only fires if `use()` is called directly on a broken item.
+
+*Why it matters:* A crash mid-combat would be a terrible player experience. Silent degradation is realistic — a broken sword still exists, it just doesn't contribute. The player sees a notification the turn it breaks, then combat continues.
+
+---
+
+**18 — `CharacterClass` sets starting stats only**
+
+Class identity determines starting values. It does not restrict equipment choices or change how stats are calculated.
+
+*Why it matters:* Equipment restrictions add complexity to `equip_gear()` with limited gameplay payoff at this stage. The class identity comes through clearly enough from starting stat distribution — a Sentinel is tankier than an Executioner from turn one, regardless of what they equip.
+
+---
+
+### Combat Design Decisions
+
+---
+
+**19 — Strategy pattern for damage**
+
+`DamageStrategy` with `NormalDamage` and `CriticalDamage` means `combat()`'s turn loop never changes when new damage types are added. Only new strategy classes are written.
+
+*Why it matters:* This is the Open/Closed Principle in practice. Adding `PoisonDamage` or `MagicDamage` in the future requires zero changes to existing code.
+
+---
+
+**20 — XP scales by defeated enemy's class and level**
+
+`xp_awarded = defeated.xp_reward_base × defeated.level`
+
+*Why it matters:* Makes enemy class identity mechanically meaningful beyond combat stats. A higher-level Sentinel genuinely rewards more than a low-level Executioner. The player's progress feels earned.
+
+---
+
+**21 — `print()` and `logging` are strictly separated**
+
+`print()` is reserved for player-facing narrative output. All internal system events use `logging.INFO` or `logging.WARNING` to a file.
+
+*Why it matters:* Mixing the two creates noise that makes both harder to use. The player shouldn't see log timestamps. The developer's log file shouldn't contain game narrative.
+
+---
+
+**22 — Save/load via JSON with context managers**
+
+`to_dict()` / `from_dict()` on every class. File operations use `with open(...)`. `CorruptSaveError` fires on malformed data.
+
+*Why it matters:* JSON is human-readable, debuggable, and requires no external library. Context managers guarantee the file is closed even if serialization fails mid-write. A specific exception type lets the caller handle save corruption separately from unexpected errors.
+
+---
+
+**23 — Packaging as an installable engine**
+
+`pyproject.toml` makes IronVault installable via `pip install -e .` and exposes an `ironvault` console command.
+
+*Why it matters:* A project that installs like a real package and runs from the terminal feels like a real engine. A project you run with `python main.py` from the right directory does not.
+
+---
+
+## Implementation Decisions
+
+What changed during the build, and why.
+
+---
+
+### `items.py`
+
+| Decision | What Changed | Why |
+|----------|-------------|-----|
+| `Rarity` stores shorthand + fullname via custom `__init__` | Tuple value `("C", "Common")` unpacked into named attributes | Readable access vs index-based `value[0]` |
+| `Gear.STAT_RANGES` replaces separate attack/defense tables | One shared table on `Gear` | Weapon and Armour use identical bounds — the subtraction formula requires balance |
+| `max_durability` added to `Weapon` and `Armour` | New attribute alongside `durability` | Required for `RepairKit` to cap repairs correctly |
+| Percentage-based `degrade()` | `max(1, int(durability * 0.05))` per use | Achieves rarity-based behavior naturally — higher durability items degrade slower |
+| Optional parameters on `__init__` | `attack_power: int \| None = None` pattern | Allows exact stat restoration via `from_dict()` without rerolling |
+| `WEIGHT_RANGE` class variable per subclass | Weight generated internally, not passed as parameter | Weight is intrinsic to the item type, not a caller decision |
+| `potency` removed from `Potion` | Dropped entirely | No natural "time" mechanic in a CLI turn-based game to tie decay to |
+| Consumables not rarity-scaled | Fixed `heal_amount` and `repair_amount` | Simplification — rarity tracking preserved but has no mechanical effect |
+| `select_target()` removed from `RepairKit` | Target set by `main.py` directly | Keeps `items.py` free of UI logic |
+| `Consumable.use()` changed to abstract | No default `return True` in base class | Forces every subclass to explicitly implement — no ambiguity |
+
+---
+
+### `inventory.py`
+
+| Decision | What Changed | Why |
+|----------|-------------|-----|
+| `ITEM_NAMES` pyramid pool | 15 Common names → 4 Legendary names per type | Rarity feels distinctive by name pool size, not just stats |
+| `to_dict()` and `from_dict()` added | Not in original design | Cleaner encapsulation — `Inventory` owns its own serialization |
+| `TypeError` branch in `add_item()` | Defensive — raises if item is neither Gear nor Consumable | Catches bad inputs explicitly rather than silently doing nothing |
+| `equip()` delegates to `character.equip_gear()` | Originally called `item.equip(character)` | Slot management belongs on `Character` since `Character` owns the slots |
+| `loot_drop()` constructs directly | Uses `Weapon(...)` not `Item.from_dict(...)` | `from_dict()` is for restoring saved state — fresh generation doesn't need it |
+
+---
+
+### `character.py`
+
+| Decision | What Changed | Why |
+|----------|-------------|-----|
+| `heal()` method added | Not in original design | `Potion.use()` calls `character.heal()` — required to preserve dependency direction |
+| `use_consumable()` added | Not in original design | Single clean entry point for all consumable usage |
+| `level_up_threshold` made a `@property` | Originally a local variable in `gain_xp()` | `main.py` needs it for XP display without duplicating the formula |
+| `equip_gear()` / `unequip_gear()` naming | Originally `equip()` / `unequip()` | More explicit — matches the delegation calls in `inventory.py` |
+| `effective_attack` / `effective_defense` return `float` | Originally `int` | Accessory bonus percentage multiplication produces a float |
+| XP carries over on level-up | Originally reset to 0 | More realistic — losing overflow XP feels punishing and arbitrary |
+| `int()` wrapping on stat increases | `base_health += int(base_health * 0.1)` | Prevents float drift across multiple level-ups |
+| Full health restore on level-up | Not in original design | Standard RPG convention — makes level-up feel like a reward |
+| `cast()` in `from_dict()` | Not in original design | `Item.from_dict()` returns `Item` — Pylance needs the hint for subclass attributes |
+
+---
+
+### `combat.py`
+
+| Decision | What Changed | Why |
+|----------|-------------|-----|
+| `calculate_damage` as module-level function | Originally a `@staticmethod` | Has no natural class to belong to — module-level is cleaner |
+| Return types changed to `float` | Originally `int` | Consistent with `effective_attack`/`effective_defense` being floats |
+| Mid-loop `break` after death | Not in original design | Prevents dead characters from attacking back |
+| Broken gear fires once only | Check moved inside `if durability > 0` block | Fires only the turn it breaks, not every subsequent turn |
+| Turn count per individual attack | Not specified in original design | Each attack is a discrete event worth counting |
+
+---
+
+### `main.py`
+
+| Decision | What Changed | Why |
+|----------|-------------|-----|
+| Full interactive game loop | Originally a linear scripted playthrough | Far more engaging — demonstrates the engine's full capability |
+| `game_loop()` split from `run()` | Not in original design | Both new game and load game can share the same loop |
+| `loot_room()` generic `source_inventory` | Originally always used `character.inventory` | Reusable for dungeon rooms and post-combat enemy drops |
+| Load game removed from `game_loop()` | Not in original design | Reassigning `character` inside a function doesn't update the caller's reference |
+| `while True` menu in `run()` | Originally recursive `return run()` | Recursion hits Python's call stack limit on repeated invalid inputs |
+| Logging to file with UTF-8 | Originally `StreamHandler` to terminal | Windows `cp1252` encoding cannot handle the `→` character in log messages |
+
+---
+
+*For what comes next, see [Future-Extensions.md](Future-Extensions.md).*
