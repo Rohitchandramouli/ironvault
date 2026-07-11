@@ -278,3 +278,18 @@ The blog post covers the personal side — scope decisions, what cost more than 
 ## License
 
 [MIT](LICENSE)
+
+---
+
+## Try It Out
+
+If something in this repo caught your interest — the architecture, a design decision, or just the idea of an RPG engine built this way — the quickest way to see it in action is:
+
+```bash
+pip install -e .
+ironvault
+```
+
+Pick a class. Loot a room. Fight something. See how long your starter weapon lasts.
+
+If you have thoughts on the architecture, the game mechanics, or directions you'd take this when it gets extended — **[start a discussion](https://github.com/Rohitchandramouli/ironvault/discussions)**. I'll be coming back to IronVault later to build on it, and outside perspectives on the design are genuinely useful.
